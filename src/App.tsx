@@ -10,6 +10,7 @@ import {
 import contractsData from "./data/contracts.json";
 import { ContractDrawer } from "./components/ContractDrawer";
 import { ContractsByModality } from "./components/ContractsByModality";
+import { ExecutivePanels } from "./components/ExecutivePanels";
 import { FiltersPanel } from "./components/FiltersPanel";
 import { Header } from "./components/Header";
 import { KpiCard } from "./components/KpiCard";
@@ -131,6 +132,7 @@ export default function App() {
 
   const deferredSearch = useDeferredValue(filters.search);
   const referenceDate = new Date();
+  const referenceLabel = new Intl.DateTimeFormat("pt-BR").format(referenceDate);
   const filterOptions = collectFilterOptions(CONTRACTS);
   const appliedFilters = { ...filters, search: deferredSearch };
 
@@ -206,108 +208,141 @@ export default function App() {
 
   return (
     <div className="min-h-screen overflow-x-hidden pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <main className="mx-auto flex w-full max-w-[1520px] flex-col gap-5 px-4 py-4 sm:gap-6 sm:px-6 lg:px-8">
+      <main className="mx-auto flex w-full max-w-[1560px] flex-col gap-5 px-4 py-4 sm:gap-6 sm:px-6 lg:px-8">
         <Header
           totalContracts={CONTRACTS.length}
           totalModalities={modalitySummaries.length}
           totalVisibleValue={formatCurrency(metrics.totalValue)}
+          activeFilterCount={activeFilterCount}
+          referenceLabel={referenceLabel}
         />
 
-        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-          <KpiCard
-            title="Total de contratos"
-            value={formatCompactNumber(metrics.totalContracts)}
-            note="Registros na seleção atual."
-            accent="brand"
-            icon={
-              <IconSquare>
-                <ContractsIcon />
-              </IconSquare>
-            }
-          />
-          <KpiCard
-            title="Valor total"
-            value={formatCurrency(metrics.totalValue)}
-            note="Soma dos valores numéricos informados."
-            accent="neutral"
-            icon={
-              <IconSquare>
-                <CurrencyIcon />
-              </IconSquare>
-            }
-          />
-          <KpiCard
-            title="Contratos ativos"
-            value={formatCompactNumber(metrics.activeContracts)}
-            note="Situação com status Ativo."
-            accent="success"
-            icon={
-              <IconSquare>
-                <CheckIcon />
-              </IconSquare>
-            }
-          />
-          <KpiCard
-            title="Contratos vencidos"
-            value={formatCompactNumber(metrics.expiredContracts)}
-            note="Com vencimento anterior à data atual."
-            accent="danger"
-            icon={
-              <IconSquare>
-                <AlertIcon />
-              </IconSquare>
-            }
-          />
-          <KpiCard
-            title="Próximos do vencimento"
-            value={formatCompactNumber(metrics.upcomingContracts)}
-            note="Hoje, até 7 dias e até 30 dias."
-            accent="warning"
-            icon={
-              <IconSquare>
-                <ClockIcon />
-              </IconSquare>
-            }
-          />
-          <KpiCard
-            title="Dados incompletos"
-            value={formatCompactNumber(metrics.incompleteContracts)}
-            note="Pendências em campos essenciais."
-            accent="neutral"
-            icon={
-              <IconSquare>
-                <DatabaseIcon />
-              </IconSquare>
-            }
+        <section id="resumo" className="space-y-4 scroll-mt-6">
+          <div className="flex flex-col gap-2">
+            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">
+              Resumo executivo
+            </p>
+            <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="section-title">Leitura imediata do recorte atual</h2>
+                <p className="section-subtitle">
+                  Indicadores consolidados para acompanhamento rápido da carteira
+                  de contratos e dos pontos de atenção.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+            <KpiCard
+              title="Total de contratos"
+              value={formatCompactNumber(metrics.totalContracts)}
+              note="Registros no recorte visível."
+              accent="brand"
+              icon={
+                <IconSquare>
+                  <ContractsIcon />
+                </IconSquare>
+              }
+            />
+            <KpiCard
+              title="Valor total"
+              value={formatCurrency(metrics.totalValue)}
+              note="Soma dos valores numéricos informados."
+              accent="neutral"
+              icon={
+                <IconSquare>
+                  <CurrencyIcon />
+                </IconSquare>
+              }
+            />
+            <KpiCard
+              title="Contratos ativos"
+              value={formatCompactNumber(metrics.activeContracts)}
+              note="Situação cadastrada como ativa."
+              accent="success"
+              icon={
+                <IconSquare>
+                  <CheckIcon />
+                </IconSquare>
+              }
+            />
+            <KpiCard
+              title="Contratos vencidos"
+              value={formatCompactNumber(metrics.expiredContracts)}
+              note="Vigência encerrada antes da data de referência."
+              accent="danger"
+              icon={
+                <IconSquare>
+                  <AlertIcon />
+                </IconSquare>
+              }
+            />
+            <KpiCard
+              title="Próximos do vencimento"
+              value={formatCompactNumber(metrics.upcomingContracts)}
+              note="Hoje, até 7 dias e até 30 dias."
+              accent="warning"
+              icon={
+                <IconSquare>
+                  <ClockIcon />
+                </IconSquare>
+              }
+            />
+            <KpiCard
+              title="Dados incompletos"
+              value={formatCompactNumber(metrics.incompleteContracts)}
+              note="Campos essenciais com pendência."
+              accent="neutral"
+              icon={
+                <IconSquare>
+                  <DatabaseIcon />
+                </IconSquare>
+              }
+            />
+          </section>
+
+          <ExecutivePanels
+            records={filteredContracts}
+            expiryChart={charts.expiryChart}
           />
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.95fr]">
-          <FiltersPanel
-            filters={filters}
-            options={filterOptions}
-            activeFilterCount={activeFilterCount}
-            mobileOpen={mobileFiltersOpen}
-            onToggleMobile={() => setMobileFiltersOpen((current) => !current)}
-            onReset={resetFilters}
-            onChange={updateFilter}
-          />
+        <section className="grid gap-4 xl:grid-cols-[1.08fr_0.92fr]">
+          <div id="filtros" className="scroll-mt-6">
+            <FiltersPanel
+              filters={filters}
+              options={filterOptions}
+              activeFilterCount={activeFilterCount}
+              mobileOpen={mobileFiltersOpen}
+              onToggleMobile={() => setMobileFiltersOpen((current) => !current)}
+              onReset={resetFilters}
+              onChange={updateFilter}
+            />
+          </div>
 
-          <ModalityBoard
-            summaries={modalitySummaries}
-            selectedModality={filters.modalidade}
-            onSelect={(modality) => updateFilter("modalidade", modality)}
-          />
+          <div id="modalidades" className="scroll-mt-6">
+            <ModalityBoard
+              summaries={modalitySummaries}
+              selectedModality={filters.modalidade}
+              onSelect={(modality) => updateFilter("modalidade", modality)}
+            />
+          </div>
         </section>
 
-        <section className="space-y-4">
+        <section id="contratos" className="space-y-4 scroll-mt-6">
           <div className="panel p-4 sm:p-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <h2 className="section-title">Contratos por modalidade</h2>
-                <p className="section-subtitle">
-                  A seleção atual é exibida em grupos completos por modalidade,
-                  com leitura mais direta no desktop e no iPhone.
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">
+                  Painel principal
+                </p>
+                <h2 className="mt-2 text-xl font-semibold tracking-tight text-[var(--text)]">
+                  Contratos organizados por modalidade
+                </h2>
+                <p className="mt-2 text-sm text-[var(--muted)]">
+                  Leitura central do sistema, com agrupamento setorial e detalhe
+                  completo por registro no desktop e no iPhone.
                 </p>
               </div>
 
@@ -388,18 +423,20 @@ export default function App() {
         </section>
 
         {filteredContracts.length > 0 ? (
-          <Suspense
-            fallback={
-              <section className="panel p-5">
-                <h2 className="section-title">Gráficos</h2>
-                <p className="mt-2 text-sm text-[var(--muted)]">
-                  Carregando visualizações analíticas...
-                </p>
-              </section>
-            }
-          >
-            <ChartsSection {...charts} />
-          </Suspense>
+          <div id="graficos" className="scroll-mt-6">
+            <Suspense
+              fallback={
+                <section className="panel p-5">
+                  <h2 className="section-title">Leitura analítica</h2>
+                  <p className="mt-2 text-sm text-[var(--muted)]">
+                    Carregando visualizações analíticas...
+                  </p>
+                </section>
+              }
+            >
+              <ChartsSection {...charts} />
+            </Suspense>
+          </div>
         ) : null}
       </main>
 

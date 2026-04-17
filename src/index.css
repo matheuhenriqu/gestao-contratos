@@ -28,6 +28,7 @@
 html {
   background: var(--bg);
   overflow-x: hidden;
+  scroll-behavior: smooth;
 }
 
 body {
