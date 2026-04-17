@@ -1,7 +1,9 @@
 import type {
+  ContractsByModalityGroup,
   ContractRecord,
   ExpiryBand,
   FiltersState,
+  ModalitySummary,
   SortKey,
   SortState,
   UiContractRecord,
@@ -481,4 +483,58 @@ export function getActiveFilterCount(filters: FiltersState) {
   }
 
   return count;
+}
+
+function buildGroupMetadata(name: string, records: UiContractRecord[]) {
+  return {
+    key: name,
+    name,
+    count: records.length,
+    totalValue: records.reduce((sum, record) => sum + (record.valor ?? 0), 0),
+    expiredCount: records.filter((record) => record.expiryBand === "expired")
+      .length,
+    upcomingCount: records.filter((record) =>
+      ["today", "up_to_7", "up_to_30"].includes(record.expiryBand),
+    ).length,
+    incompleteCount: records.filter((record) => record.hasMissingData).length,
+  };
+}
+
+export function buildModalitySummaries(records: UiContractRecord[]) {
+  const groups = new Map<string, UiContractRecord[]>();
+
+  for (const record of records) {
+    const name = record.modalidade ?? "Não informado";
+    const current = groups.get(name) ?? [];
+    current.push(record);
+    groups.set(name, current);
+  }
+
+  return [...groups.entries()]
+    .map(([name, groupRecords]) => buildGroupMetadata(name, groupRecords))
+    .sort((left, right) =>
+      right.count - left.count ||
+      left.name.localeCompare(right.name, "pt-BR", { sensitivity: "base" }),
+    ) satisfies ModalitySummary[];
+}
+
+export function groupContractsByModality(records: UiContractRecord[]) {
+  const groups = new Map<string, UiContractRecord[]>();
+
+  for (const record of records) {
+    const name = record.modalidade ?? "Não informado";
+    const current = groups.get(name) ?? [];
+    current.push(record);
+    groups.set(name, current);
+  }
+
+  return [...groups.entries()]
+    .map(([name, groupRecords]) => ({
+      ...buildGroupMetadata(name, groupRecords),
+      records: groupRecords,
+    }))
+    .sort((left, right) =>
+      right.count - left.count ||
+      left.name.localeCompare(right.name, "pt-BR", { sensitivity: "base" }),
+    ) satisfies ContractsByModalityGroup[];
 }

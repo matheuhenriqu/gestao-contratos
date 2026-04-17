@@ -1,6 +1,7 @@
 import {
   Suspense,
   lazy,
+  type ReactNode,
   startTransition,
   useDeferredValue,
   useEffect,
@@ -8,26 +9,25 @@ import {
 } from "react";
 import contractsData from "./data/contracts.json";
 import { ContractDrawer } from "./components/ContractDrawer";
-import { ContractsTable } from "./components/ContractsTable";
+import { ContractsByModality } from "./components/ContractsByModality";
 import { FiltersPanel } from "./components/FiltersPanel";
 import { Header } from "./components/Header";
 import { KpiCard } from "./components/KpiCard";
-import { MobileContractList } from "./components/MobileContractList";
-import { Pagination } from "./components/Pagination";
+import { ModalityBoard } from "./components/ModalityBoard";
 import type { ContractRecord, FiltersState, SortState } from "./types/contracts";
 import {
   DEFAULT_FILTERS,
   DEFAULT_SORT,
   buildChartData,
   buildMetrics,
+  buildModalitySummaries,
   collectFilterOptions,
   filterAndSortContracts,
   getActiveFilterCount,
-  paginateContracts,
+  groupContractsByModality,
 } from "./utils/contracts";
 import { formatCompactNumber, formatCurrency } from "./utils/format";
 
-const PAGE_SIZE = 12;
 const CONTRACTS = contractsData as ContractRecord[];
 const ChartsSection = lazy(() => import("./components/ChartsSection"));
 
@@ -64,11 +64,7 @@ const SORT_PRESETS: Array<{ label: string; value: string; state: SortState }> = 
   },
 ];
 
-function IconSquare({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function IconSquare({ children }: { children: ReactNode }) {
   return <div className="h-6 w-6">{children}</div>;
 }
 
@@ -130,7 +126,6 @@ function DatabaseIcon() {
 export default function App() {
   const [filters, setFilters] = useState<FiltersState>(DEFAULT_FILTERS);
   const [sortState, setSortState] = useState<SortState>(DEFAULT_SORT);
-  const [page, setPage] = useState(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
 
@@ -138,23 +133,31 @@ export default function App() {
   const referenceDate = new Date();
   const filterOptions = collectFilterOptions(CONTRACTS);
   const appliedFilters = { ...filters, search: deferredSearch };
+
   const filteredContracts = filterAndSortContracts(
     CONTRACTS,
     appliedFilters,
     sortState,
     referenceDate,
   );
+
+  const contractsForModalities = filterAndSortContracts(
+    CONTRACTS,
+    { ...appliedFilters, modalidade: "all" },
+    sortState,
+    referenceDate,
+  );
+
   const metrics = buildMetrics(filteredContracts);
   const charts = buildChartData(filteredContracts);
-  const pagination = paginateContracts(filteredContracts, page, PAGE_SIZE);
+  const modalitySummaries = buildModalitySummaries(contractsForModalities);
+  const groupedContracts = groupContractsByModality(filteredContracts);
   const activeFilterCount = getActiveFilterCount(filters);
   const selectedContract =
     filteredContracts.find((contract) => contract.id === selectedContractId) ?? null;
-  useEffect(() => {
-    if (pagination.page !== page) {
-      setPage(pagination.page);
-    }
-  }, [page, pagination.page]);
+  const selectedModalityLabel =
+    filters.modalidade === "all" ? "Todas as modalidades" : filters.modalidade;
+  const sortPresetValue = `${sortState.key}:${sortState.direction}`;
 
   useEffect(() => {
     if (
@@ -171,14 +174,12 @@ export default function App() {
   ) {
     startTransition(() => {
       setFilters((current) => ({ ...current, [key]: value }));
-      setPage(1);
     });
   }
 
   function resetFilters() {
     startTransition(() => {
       setFilters(DEFAULT_FILTERS);
-      setPage(1);
     });
   }
 
@@ -189,7 +190,6 @@ export default function App() {
         direction:
           current.key === key && current.direction === "asc" ? "desc" : "asc",
       }));
-      setPage(1);
     });
   }
 
@@ -201,22 +201,23 @@ export default function App() {
 
     startTransition(() => {
       setSortState(selectedPreset.state);
-      setPage(1);
     });
   }
 
-  const sortPresetValue = `${sortState.key}:${sortState.direction}`;
-
   return (
-    <div className="min-h-screen pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <Header totalContracts={CONTRACTS.length} />
+    <div className="min-h-screen overflow-x-hidden pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <main className="mx-auto flex w-full max-w-[1520px] flex-col gap-5 px-4 py-4 sm:gap-6 sm:px-6 lg:px-8">
+        <Header
+          totalContracts={CONTRACTS.length}
+          totalModalities={modalitySummaries.length}
+          totalVisibleValue={formatCurrency(metrics.totalValue)}
+        />
 
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
           <KpiCard
             title="Total de contratos"
             value={formatCompactNumber(metrics.totalContracts)}
-            note="Resultado conforme a seleção atual."
+            note="Registros na seleção atual."
             accent="brand"
             icon={
               <IconSquare>
@@ -227,7 +228,7 @@ export default function App() {
           <KpiCard
             title="Valor total"
             value={formatCurrency(metrics.totalValue)}
-            note="Soma dos valores numéricos disponíveis."
+            note="Soma dos valores numéricos informados."
             accent="neutral"
             icon={
               <IconSquare>
@@ -238,7 +239,7 @@ export default function App() {
           <KpiCard
             title="Contratos ativos"
             value={formatCompactNumber(metrics.activeContracts)}
-            note="Status cadastrado como Ativo."
+            note="Situação com status Ativo."
             accent="success"
             icon={
               <IconSquare>
@@ -249,7 +250,7 @@ export default function App() {
           <KpiCard
             title="Contratos vencidos"
             value={formatCompactNumber(metrics.expiredContracts)}
-            note="Vencimento anterior à data atual."
+            note="Com vencimento anterior à data atual."
             accent="danger"
             icon={
               <IconSquare>
@@ -271,7 +272,7 @@ export default function App() {
           <KpiCard
             title="Dados incompletos"
             value={formatCompactNumber(metrics.incompleteContracts)}
-            note="Pendências nos campos operacionais."
+            note="Pendências em campos essenciais."
             accent="neutral"
             icon={
               <IconSquare>
@@ -281,27 +282,63 @@ export default function App() {
           />
         </section>
 
-        <FiltersPanel
-          filters={filters}
-          options={filterOptions}
-          activeFilterCount={activeFilterCount}
-          mobileOpen={mobileFiltersOpen}
-          onToggleMobile={() => setMobileFiltersOpen((current) => !current)}
-          onReset={resetFilters}
-          onChange={updateFilter}
-        />
+        <section className="grid gap-4 xl:grid-cols-[1.15fr_0.95fr]">
+          <FiltersPanel
+            filters={filters}
+            options={filterOptions}
+            activeFilterCount={activeFilterCount}
+            mobileOpen={mobileFiltersOpen}
+            onToggleMobile={() => setMobileFiltersOpen((current) => !current)}
+            onReset={resetFilters}
+            onChange={updateFilter}
+          />
 
-        <section className="panel overflow-hidden">
-          <div className="flex flex-col gap-4 border-b border-[color:var(--border)] px-4 py-4 sm:px-5">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <ModalityBoard
+            summaries={modalitySummaries}
+            selectedModality={filters.modalidade}
+            onSelect={(modality) => updateFilter("modalidade", modality)}
+          />
+        </section>
+
+        <section className="space-y-4">
+          <div className="panel p-4 sm:p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <h2 className="section-title">Tabela principal</h2>
+                <h2 className="section-title">Contratos por modalidade</h2>
                 <p className="section-subtitle">
-                  Consulta principal com ordenação, paginação e detalhe completo.
+                  A seleção atual é exibida em grupos completos por modalidade,
+                  com leitura mais direta no desktop e no iPhone.
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-end">
+                <div className="rounded-2xl border border-[color:var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-[var(--muted)]">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                    Modalidade ativa
+                  </p>
+                  <p className="mt-1 font-medium text-[var(--text)]">
+                    {selectedModalityLabel}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[color:var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-[var(--muted)]">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                    Registros visíveis
+                  </p>
+                  <p className="mt-1 font-medium text-[var(--text)]">
+                    {formatCompactNumber(filteredContracts.length)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-[color:var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-[var(--muted)]">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+                    Grupos visíveis
+                  </p>
+                  <p className="mt-1 font-medium text-[var(--text)]">
+                    {formatCompactNumber(groupedContracts.length)}
+                  </p>
+                </div>
+
                 <div className="min-w-0 sm:w-[16rem]">
                   <label className="field-label">Ordenação</label>
                   <select
@@ -316,16 +353,12 @@ export default function App() {
                     ))}
                   </select>
                 </div>
-                <div className="rounded-2xl border border-[color:var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-[var(--muted)]">
-                  {formatCompactNumber(filteredContracts.length)} registro
-                  {filteredContracts.length === 1 ? "" : "s"} na seleção
-                </div>
               </div>
             </div>
           </div>
 
           {filteredContracts.length === 0 ? (
-            <div className="px-4 py-14 text-center sm:px-5">
+            <div className="panel px-4 py-14 text-center sm:px-5">
               <div className="mx-auto max-w-md">
                 <p className="text-lg font-semibold text-[var(--text)]">
                   Nenhum contrato encontrado.
@@ -344,31 +377,13 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <>
-              <ContractsTable
-                records={pagination.items}
-                selectedContractId={selectedContractId}
-                sortState={sortState}
-                onSortChange={handleSortToggle}
-                onSelect={(contract) => setSelectedContractId(contract.id)}
-              />
-
-              <div className="px-4 py-4 sm:px-5 lg:hidden">
-                <MobileContractList
-                  records={pagination.items}
-                  selectedContractId={selectedContractId}
-                  onSelect={(contract) => setSelectedContractId(contract.id)}
-                />
-              </div>
-
-              {pagination.totalPages > 1 ? (
-                <Pagination
-                  page={pagination.page}
-                  totalPages={pagination.totalPages}
-                  onChange={setPage}
-                />
-              ) : null}
-            </>
+            <ContractsByModality
+              groups={groupedContracts}
+              selectedContractId={selectedContractId}
+              sortState={sortState}
+              onSortChange={handleSortToggle}
+              onSelect={(contract) => setSelectedContractId(contract.id)}
+            />
           )}
         </section>
 

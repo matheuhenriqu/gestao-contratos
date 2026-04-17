@@ -5,8 +5,10 @@ import {
   DEFAULT_FILTERS,
   DEFAULT_SORT,
   buildMetrics,
+  buildModalitySummaries,
   filterAndSortContracts,
   getDaysToExpiry,
+  groupContractsByModality,
   paginateContracts,
 } from "./contracts";
 
@@ -150,6 +152,40 @@ describe("contracts utils", () => {
     expect(metrics.incompleteContracts).toBe(2);
     expect(metrics.totalValue).toBe(125000);
   });
+
+  it("resume os contratos por modalidade", () => {
+    const uiRecords = filterAndSortContracts(
+      contracts,
+      DEFAULT_FILTERS,
+      DEFAULT_SORT,
+      referenceDate,
+    );
+    const summaries = buildModalitySummaries(uiRecords);
+    const chamada = summaries.find((item) => item.name === "Chamada Pública");
+
+    expect(summaries).toHaveLength(3);
+    expect(chamada).toMatchObject({
+      count: 1,
+      totalValue: 25000,
+      expiredCount: 1,
+      incompleteCount: 1,
+    });
+  });
+
+  it("agrupa os contratos em seções por modalidade", () => {
+    const uiRecords = filterAndSortContracts(
+      contracts,
+      DEFAULT_FILTERS,
+      DEFAULT_SORT,
+      referenceDate,
+    );
+    const groups = groupContractsByModality(uiRecords);
+    const prorrogacao = groups.find((item) => item.name === "Prorrogação");
+
+    expect(groups).toHaveLength(3);
+    expect(prorrogacao?.records.map((item) => item.id)).toEqual(["3"]);
+    expect(prorrogacao?.incompleteCount).toBe(1);
+  });
 });
 
 describe("format utils", () => {
@@ -161,6 +197,6 @@ describe("format utils", () => {
 
   it("formata datas e valores em padrão brasileiro", () => {
     expect(formatDate("2026-04-17")).toBe("17/04/2026");
-    expect(formatCurrency(125000)).toBe("R$ 125.000,00");
+    expect(formatCurrency(125000)).toBe("R$\u00a0125.000,00");
   });
 });

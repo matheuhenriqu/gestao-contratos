@@ -83,3 +83,17 @@ export type UiContractRecord = ContractRecord & {
   dueSituation: string;
   urgency: "critical" | "warning" | "ok" | "neutral";
 };
+
+export type ModalitySummary = {
+  key: string;
+  name: string;
+  count: number;
+  totalValue: number;
+  expiredCount: number;
+  upcomingCount: number;
+  incompleteCount: number;
+};
+
+export type ContractsByModalityGroup = ModalitySummary & {
+  records: UiContractRecord[];
+};

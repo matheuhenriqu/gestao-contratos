@@ -27,6 +27,7 @@
 
 html {
   background: var(--bg);
+  overflow-x: hidden;
 }
 
 body {
@@ -49,6 +50,12 @@ button,
 input,
 select {
   font: inherit;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
 }
 
 button:focus-visible,

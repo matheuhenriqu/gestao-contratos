@@ -11,12 +11,14 @@ type MobileContractListProps = {
   records: UiContractRecord[];
   selectedContractId: string | null;
   onSelect: (contract: UiContractRecord) => void;
+  hideModalidade?: boolean;
 };
 
 export function MobileContractList({
   records,
   selectedContractId,
   onSelect,
+  hideModalidade = false,
 }: MobileContractListProps) {
   return (
     <div className="space-y-3 lg:hidden">
@@ -34,9 +36,11 @@ export function MobileContractList({
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-                  {formatText(record.modalidade)}
-                </p>
+                {!hideModalidade ? (
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
+                    {formatText(record.modalidade)}
+                  </p>
+                ) : null}
                 <h3 className="mt-2 text-base font-semibold tracking-tight text-[var(--text)]">
                   {formatText(record.empresaContratada)}
                 </h3>
