@@ -297,8 +297,7 @@ export default function App() {
               <div>
                 <h2 className="section-title">Tabela principal</h2>
                 <p className="section-subtitle">
-                  Ordenação por coluna no desktop, cards nativos no mobile e
-                  detalhe completo ao selecionar um registro.
+                  Consulta principal com ordenação, paginação e detalhe completo.
                 </p>
               </div>
 

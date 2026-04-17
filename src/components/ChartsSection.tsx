@@ -26,6 +26,14 @@ type ChartsSectionProps = {
   companyValueChart: ChartRow[];
 };
 
+function truncateLabel(value: string, maxLength = 18) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength - 1)}…`;
+}
+
 const PIE_COLORS = [
   "#164978",
   "#0f3352",
@@ -79,10 +87,7 @@ function ChartsSection({
     <section className="space-y-4">
       <div>
         <h2 className="section-title">Gráficos</h2>
-        <p className="section-subtitle">
-          Distribuição por status, modalidade, vencimento e concentração por
-          empresa.
-        </p>
+        <p className="section-subtitle">Distribuição por status, vencimento e empresa.</p>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -136,6 +141,7 @@ function ChartsSection({
                 type="category"
                 dataKey="name"
                 width={120}
+                tickFormatter={(value: string) => truncateLabel(value, 18)}
                 {...commonAxisProps}
               />
               <Tooltip
@@ -206,6 +212,7 @@ function ChartsSection({
                 type="category"
                 dataKey="name"
                 width={120}
+                tickFormatter={(value: string) => truncateLabel(value, 18)}
                 {...commonAxisProps}
               />
               <Tooltip
@@ -252,7 +259,8 @@ function ChartsSection({
                 <YAxis
                   type="category"
                   dataKey="name"
-                  width={160}
+                  width={132}
+                  tickFormatter={(value: string) => truncateLabel(value, 20)}
                   {...commonAxisProps}
                 />
                 <Tooltip

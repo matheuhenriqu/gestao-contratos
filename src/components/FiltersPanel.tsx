@@ -126,9 +126,7 @@ export function FiltersPanel({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="section-title">Filtros</h2>
-          <p className="section-subtitle">
-            Busca rápida, recortes operacionais e pendências de dados.
-          </p>
+          <p className="section-subtitle">Busca rápida e recortes operacionais.</p>
         </div>
 
         <div className="flex items-center gap-2">

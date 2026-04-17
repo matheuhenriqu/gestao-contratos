@@ -17,14 +17,13 @@ export function Header({ totalContracts }: HeaderProps) {
 
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--brand)]">
-              Prefeitura de Iguape/SP
+              Sistema institucional
             </p>
             <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl">
               Gestão de Contratos
             </h1>
             <p className="mt-2 text-sm text-[var(--muted)]">
-              Consulta institucional com leitura rápida, filtros operacionais e
-              acompanhamento de vencimentos.
+              Prefeitura de Iguape/SP
             </p>
           </div>
         </div>
